@@ -1,0 +1,151 @@
+.login-logo {
+  margin-top: 50px;
+}
+.login-page {
+  background-color: #E6E6E6;
+}
+.generic-user-lg {
+  font-size: 72px;
+  background-color: #b8c7ce;
+  padding: 8px 32px;
+  border-radius: 50%;
+  color: #1a2226;
+}
+
+.generic-user-md {
+  font-size: 24px;
+  background-color: #b8c7ce;
+  padding: 0px 6px;
+  border-radius: 50%;
+  color: #1a2226;
+}
+
+.generic-user-sm {
+  font-size: 15px;
+  background-color: #b8c7ce;
+  padding: 1px 4px;
+  border-radius: 50%;
+  color: #1a2226;
+}
+
+.skin-blue .main-header .logo,
+.skin-blue .main-header .logo:hover {
+  background-color: #3AAAC2;
+}
+
+.btn-panel-header {
+  font-size: 15px;
+  padding: 8px 10px 6px 10px;
+}
+
+div.dataTables_wrapper div.dataTables_filter label {
+  display: block;
+  text-align: right;
+}
+
+div.dataTables_wrapper div.dataTables_filter input {
+  width: 50%;
+}
+
+.btn-detalles, .btn-editar, .btn-eliminar {
+  width: 35px;
+}
+
+.table>tbody>tr.active>td, .table>tbody>tr.active>th, .table>tbody>tr>td.active, .table>tbody>tr>th.active, .table>tfoot>tr.active>td, .table>tfoot>tr.active>th, .table>tfoot>tr>td.active, .table>tfoot>tr>th.active, .table>thead>tr.active>td, .table>thead>tr.active>th, .table>thead>tr>td.active, .table>thead>tr>th.active {
+    background-color: #F5F691;
+}
+.info-box .progress-description a {
+  color: rgba(255,255,255,0.8);
+}
+
+.info-box .progress-description a:hover {
+  color: #fff;
+}
+.info-box-number {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.panel-heading a.expandible:before {
+    font-family: 'Glyphicons Halflings';
+    content: "\e114";
+}
+.panel-heading a.expandible.collapsed:before {
+    content: "\e080";
+}
+.panel-heading a.expandible:focus,
+.panel-heading a.expandible:hover,
+.panel-heading a.expandible {
+  color: inherit;
+  background-color: inherit;
+}
+
+.ui-front {
+  z-index: 1100;
+}
+
+#panel_registro_medico .panel-collapse {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+#panel_registro_medico .panel-collapse.collapsing {
+  overflow-y: hidden;
+}
+
+.icono-accion-panel {
+    font-size: 21px;
+    font-weight: 300;
+    line-height: 1;
+    float: right !important;
+    margin-left: 8px;
+}
+
+.modal-body {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.fc-event:hover,
+.fc-bgevent:hover{
+    background-color: orange !important;
+    color: white;
+    cursor: pointer;
+}
+
+#farmacia-calendario .fc-bgevent {
+  opacity: 0.8;
+}
+
+.modal .panel-body {
+  background-color: #ecf0f5;
+}
+
+.fc-day-grid-event .fc-content {
+  white-space: normal;
+}
+
+.table-responsive {
+  border: 0px;
+}
+
+td.details-control i {
+  cursor: pointer;
+  font-size: 18px;
+}
+
+td.details-control i.fa-plus-circle {
+  color: green;
+}
+
+td.details-control i.fa-minus-circle {
+  color: red;
+}
+
+@media print {
+  @page { margin: 0 30px; }
+  body { margin: 2cm; }
+  div.row { page-break-inside:avoid; }
+}
