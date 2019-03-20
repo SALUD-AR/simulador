@@ -63,7 +63,10 @@ if (!is_file(ROOT_DIR."/acl.data")) {
 
   $recursos = array(
     '/pss/listado'                 => array('ver', 'editar'),
-    '/pss/listado_pss'             => array('ver', 'editar'),
+	'/pss/listado_pss'             => array('ver', 'editar'),
+	'/pss/firma'			       => array('ver', 'editar'),
+	'/pss/firmas'			       => array('ver', 'editar'),
+	'/pss/firma_snomed'		       => array('ver', 'editar'),
     '/pss/agregar'                 => array('ver', 'editar'),
     '/pss/informe'                 => array('ver', 'editar'),
     '/pss/modificar'               => array('ver', 'editar'),
@@ -91,6 +94,12 @@ if (!is_file(ROOT_DIR."/acl.data")) {
 
   $acl->allow("Consulta", "/pss/listado", "ver");
   $acl->allow("Consulta", "/pss/listado_pss", "ver");
+  
+  // Firma Digital 
+  $acl->allow("Consulta", "/pss/firma", "ver");
+  $acl->allow("Consulta", "/pss/firmas", "ver");
+  $acl->allow("Consulta", "/pss/firma_snomed", "ver");
+  // Firma Digital
 
   // $acl->allow("Nutricionista", "/sistema/alertas", "ver");
   // $acl->allow("Nutricionista", "/pacientes/informacion", "ver");
@@ -278,13 +287,13 @@ function Hora($hora_db) {
 //funcion defectuosa
 //cuidado
 function Fecha_db($fecha) {
-		if (strstr($fecha,"/"))
-			list($d,$m,$a) = explode("/",$fecha);
-		elseif (strstr($fecha,"-"))
-			list($d,$m,$a) = explode("-",$fecha);
-		else
-			return "";
-		return "$a-$m-$d";
+	if (strstr($fecha,"/"))
+		list($d,$m,$a) = explode("/",$fecha);
+	elseif (strstr($fecha,"-"))
+		list($d,$m,$a) = explode("-",$fecha);
+	else
+		return "";
+return "$a-$m-$d";
 }
 
 
@@ -505,8 +514,6 @@ function str_count_letra($letra,$string) {
  return $counter;
 
 }
-
-
 
 /**********************************************************************
 FUNCION QUE ORDENA UN ARREGLO BIDIMENSIONAL POR EL CAMPO $campo
@@ -1620,7 +1627,8 @@ if (isset($_POST["username"])) {
               u.telefono,
               u.email,
               u.observaciones,
-              u.fecha_alta
+              u.fecha_alta,
+							u.cuil
             FROM
               sistema.usuarios u
               LEFT OUTER JOIN sistema.usuarios_tipos t ON (u.id_tipo = t.id)
@@ -1643,7 +1651,8 @@ if (isset($_POST["username"])) {
     $usuario->telefono      = $res->fields["telefono"];
     $usuario->email         = $res->fields["email"];
     $usuario->observaciones = $res->fields["observaciones"];
-    $usuario->fecha_alta    = $res->fields["fecha_alta"];
+	$usuario->fecha_alta    = $res->fields["fecha_alta"];
+	$usuario->cuil    			= $res->fields["cuil"];
     $usuario->sess_start    = time();
   }
   else {

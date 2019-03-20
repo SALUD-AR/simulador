@@ -1,0 +1,1859 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 9.4.5
+-- Dumped by pg_dump version 9.5.0
+
+-- Started on 2019-03-19 14:53:07
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 2283 (class 1262 OID 133096)
+-- Name: simulador; Type: DATABASE; Schema: -; Owner: postgres
+--
+
+CREATE DATABASE simulador WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'C' LC_CTYPE = 'C';
+
+
+ALTER DATABASE simulador OWNER TO postgres;
+
+\connect simulador
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 10 (class 2615 OID 526828)
+-- Name: firma; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA firma;
+
+
+ALTER SCHEMA firma OWNER TO postgres;
+
+--
+-- TOC entry 6 (class 2615 OID 133097)
+-- Name: simulador; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA simulador;
+
+
+ALTER SCHEMA simulador OWNER TO postgres;
+
+--
+-- TOC entry 7 (class 2615 OID 133098)
+-- Name: sistema; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA sistema;
+
+
+ALTER SCHEMA sistema OWNER TO postgres;
+
+--
+-- TOC entry 9 (class 2615 OID 134307)
+-- Name: snomed; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA snomed;
+
+
+ALTER SCHEMA snomed OWNER TO postgres;
+
+--
+-- TOC entry 226 (class 3079 OID 11855)
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- TOC entry 2286 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = snomed, pg_catalog;
+
+--
+-- TOC entry 239 (class 1255 OID 134308)
+-- Name: ansestros_out(numeric); Type: FUNCTION; Schema: snomed; Owner: postgres
+--
+
+CREATE FUNCTION ansestros_out(varconceptid numeric, OUT conceptid numeric, OUT term character varying, OUT depth integer) RETURNS SETOF record
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN  select d.conceptid, d.term, t.depth
+		from snomed.descriptions d 
+		Inner join snomed.languages l on d.id = l.referencedcomponentid
+		inner join snomed.transitiveclosure t on t.supertypeid = d.conceptid
+		where 
+		d.active = TRUE
+		and l.active = TRUE
+		and l.refsetid =  450828004 --conjunto de referencias de lenguaje castellano para América Latina (metadato fundacional) 
+		and t.subtypeid = varconceptid --valor para buscar
+		--and d.typeId = 900000000000003001 --FSN
+		order by t.depth, char_length(d.term) LOOP
+	conceptid := reg.conceptid;
+	term := reg.term;
+	depth := reg.depth;
+       RETURN NEXT;
+    END LOOP;
+    RETURN;
+END
+$$;
+
+
+ALTER FUNCTION snomed.ansestros_out(varconceptid numeric, OUT conceptid numeric, OUT term character varying, OUT depth integer) OWNER TO postgres;
+
+--
+-- TOC entry 240 (class 1255 OID 134309)
+-- Name: descendientes_out(numeric); Type: FUNCTION; Schema: snomed; Owner: postgres
+--
+
+CREATE FUNCTION descendientes_out(varconceptid numeric, OUT conceptid numeric, OUT term character varying, OUT depth integer) RETURNS SETOF record
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN  select d.conceptId, d.term, t.depth
+		from snomed.descriptions d 
+		Inner join snomed.languages l on d.id = l.referencedcomponentid
+		inner join snomed.transitiveclosure t on t.subtypeid = d.conceptId
+		where 
+		d.active = TRUE
+		and l.active = TRUE
+		and l.refsetId =  450828004 --conjunto de referencias de lenguaje castellano para América Latina (metadato fundacional) 
+		and t.supertypeId = varconceptid --valor para buscar
+		--and d.typeId = 900000000000003001 --FSN
+		order by t.depth, char_length(d.term) LOOP
+	conceptid := reg.conceptid;
+	term := reg.term;
+	depth := reg.depth;
+       RETURN NEXT;
+    END LOOP;
+    RETURN;
+END
+$$;
+
+
+ALTER FUNCTION snomed.descendientes_out(varconceptid numeric, OUT conceptid numeric, OUT term character varying, OUT depth integer) OWNER TO postgres;
+
+--
+-- TOC entry 241 (class 1255 OID 134310)
+-- Name: term(character varying); Type: FUNCTION; Schema: snomed; Owner: postgres
+--
+
+CREATE FUNCTION term(varterm character varying, OUT conceptid numeric, OUT id numeric, OUT term character varying) RETURNS SETOF record
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN  SELECT  d.conceptid, d.id, d.term
+		FROM 
+		snomed.descriptions d 
+		Inner join snomed.languages l on d.id = l.referencedcomponentid
+		Inner join snomed.concepts c on c.id = d.conceptid
+		WHERE 
+			c.active = True
+			and d.active = True 
+			and l.active = True			 
+			and l.refsetId =  450828004 --conjunto de referencias de lenguaje castellano para América Latina (metadato fundacional)
+			AND to_tsquery(varterm) @@ textsearchable_index_col
+		Order by char_length(d.term),d.term LIMIT 50 LOOP
+		conceptid := reg.conceptid;
+		id := reg.id;
+		term := reg.term;
+       RETURN NEXT;
+    END LOOP;
+    RETURN;
+END
+$$;
+
+
+ALTER FUNCTION snomed.term(varterm character varying, OUT conceptid numeric, OUT id numeric, OUT term character varying) OWNER TO postgres;
+
+SET search_path = firma, pg_catalog;
+
+--
+-- TOC entry 224 (class 1259 OID 526829)
+-- Name: firmas_id_firma; Type: SEQUENCE; Schema: firma; Owner: postgres
+--
+
+CREATE SEQUENCE firmas_id_firma
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE firmas_id_firma OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- TOC entry 225 (class 1259 OID 526831)
+-- Name: firmas; Type: TABLE; Schema: firma; Owner: postgres
+--
+
+CREATE TABLE firmas (
+    id_firma integer DEFAULT nextval('firmas_id_firma'::regclass) NOT NULL,
+    documento text NOT NULL,
+    metadata json,
+    status text NOT NULL,
+    id_usuario integer DEFAULT 1,
+    fecha_firma date DEFAULT now(),
+    location text,
+    msg text,
+    documento_enviado text,
+    nrodoc text,
+    nombres text,
+    apellido text,
+    sexo text,
+    diagnostico text,
+    evolucion text
+);
+
+
+ALTER TABLE firmas OWNER TO postgres;
+
+SET search_path = simulador, pg_catalog;
+
+--
+-- TOC entry 176 (class 1259 OID 133099)
+-- Name: amb; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE amb (
+    id_amb integer NOT NULL,
+    descri character(500)
+);
+
+
+ALTER TABLE amb OWNER TO postgres;
+
+--
+-- TOC entry 196 (class 1259 OID 134186)
+-- Name: amb_aux; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE amb_aux (
+    cod character(100),
+    descri character(500)
+);
+
+
+ALTER TABLE amb_aux OWNER TO postgres;
+
+--
+-- TOC entry 177 (class 1259 OID 133102)
+-- Name: amb_id_amb_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE amb_id_amb_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE amb_id_amb_seq OWNER TO postgres;
+
+--
+-- TOC entry 2287 (class 0 OID 0)
+-- Dependencies: 177
+-- Name: amb_id_amb_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE amb_id_amb_seq OWNED BY amb.id_amb;
+
+
+--
+-- TOC entry 223 (class 1259 OID 137028)
+-- Name: comentarios; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE comentarios (
+    id integer NOT NULL,
+    descri character(500),
+    id_pss integer
+);
+
+
+ALTER TABLE comentarios OWNER TO postgres;
+
+--
+-- TOC entry 222 (class 1259 OID 137026)
+-- Name: comentarios_id_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE comentarios_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE comentarios_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2288 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: comentarios_id_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE comentarios_id_seq OWNED BY comentarios.id;
+
+
+--
+-- TOC entry 201 (class 1259 OID 134298)
+-- Name: datos_reportables; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE datos_reportables (
+    id integer NOT NULL,
+    descri text,
+    id_pss integer
+);
+
+
+ALTER TABLE datos_reportables OWNER TO postgres;
+
+--
+-- TOC entry 200 (class 1259 OID 134296)
+-- Name: datos_reportables_id_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE datos_reportables_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE datos_reportables_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2289 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: datos_reportables_id_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE datos_reportables_id_seq OWNED BY datos_reportables.id;
+
+
+--
+-- TOC entry 178 (class 1259 OID 133104)
+-- Name: diag; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE diag (
+    id_diag integer NOT NULL,
+    descri character(500)
+);
+
+
+ALTER TABLE diag OWNER TO postgres;
+
+--
+-- TOC entry 197 (class 1259 OID 134192)
+-- Name: diag_aux; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE diag_aux (
+    cod character(100),
+    descri character(500)
+);
+
+
+ALTER TABLE diag_aux OWNER TO postgres;
+
+--
+-- TOC entry 179 (class 1259 OID 133107)
+-- Name: diag_id_diag_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE diag_id_diag_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE diag_id_diag_seq OWNER TO postgres;
+
+--
+-- TOC entry 2290 (class 0 OID 0)
+-- Dependencies: 179
+-- Name: diag_id_diag_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE diag_id_diag_seq OWNED BY diag.id_diag;
+
+
+--
+-- TOC entry 180 (class 1259 OID 133109)
+-- Name: esp; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE esp (
+    id_esp integer NOT NULL,
+    descri character(500)
+);
+
+
+ALTER TABLE esp OWNER TO postgres;
+
+--
+-- TOC entry 198 (class 1259 OID 134198)
+-- Name: esp_aux; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE esp_aux (
+    cod character(100),
+    descri character(500)
+);
+
+
+ALTER TABLE esp_aux OWNER TO postgres;
+
+--
+-- TOC entry 181 (class 1259 OID 133112)
+-- Name: esp_id_esp_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE esp_id_esp_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE esp_id_esp_seq OWNER TO postgres;
+
+--
+-- TOC entry 2291 (class 0 OID 0)
+-- Dependencies: 181
+-- Name: esp_id_esp_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE esp_id_esp_seq OWNED BY esp.id_esp;
+
+
+--
+-- TOC entry 182 (class 1259 OID 133114)
+-- Name: log_pss; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE log_pss (
+    id_log_pss integer NOT NULL,
+    id_pss numeric,
+    accion character(100),
+    fecha timestamp with time zone,
+    usuario character(100)
+);
+
+
+ALTER TABLE log_pss OWNER TO postgres;
+
+--
+-- TOC entry 183 (class 1259 OID 133120)
+-- Name: log_pss_id_log_pss_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE log_pss_id_log_pss_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE log_pss_id_log_pss_seq OWNER TO postgres;
+
+--
+-- TOC entry 2292 (class 0 OID 0)
+-- Dependencies: 183
+-- Name: log_pss_id_log_pss_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE log_pss_id_log_pss_seq OWNED BY log_pss.id_log_pss;
+
+
+--
+-- TOC entry 184 (class 1259 OID 133122)
+-- Name: proc; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE proc (
+    id_prod integer NOT NULL,
+    descri character(500)
+);
+
+
+ALTER TABLE proc OWNER TO postgres;
+
+--
+-- TOC entry 199 (class 1259 OID 134204)
+-- Name: proc_aux; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE proc_aux (
+    cod character(100),
+    descri character(500)
+);
+
+
+ALTER TABLE proc_aux OWNER TO postgres;
+
+--
+-- TOC entry 185 (class 1259 OID 133125)
+-- Name: proc_id_prod_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE proc_id_prod_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE proc_id_prod_seq OWNER TO postgres;
+
+--
+-- TOC entry 2293 (class 0 OID 0)
+-- Dependencies: 185
+-- Name: proc_id_prod_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE proc_id_prod_seq OWNED BY proc.id_prod;
+
+
+--
+-- TOC entry 186 (class 1259 OID 133127)
+-- Name: pss; Type: TABLE; Schema: simulador; Owner: postgres
+--
+
+CREATE TABLE pss (
+    id_pss integer NOT NULL,
+    cod character(200),
+    prestacion character(200),
+    procedimiento character(200),
+    cod_procedimiento character(200),
+    especialidad character(400),
+    cod_especialidad character(600),
+    ambito character(200),
+    cod_ambito character(200),
+    diagnostico character(400),
+    cod_diagnostico character(400),
+    sexo character(20),
+    edad character(30),
+    grupo_etareo character(3)
+);
+
+
+ALTER TABLE pss OWNER TO postgres;
+
+--
+-- TOC entry 187 (class 1259 OID 133133)
+-- Name: pss_id_pss_seq; Type: SEQUENCE; Schema: simulador; Owner: postgres
+--
+
+CREATE SEQUENCE pss_id_pss_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE pss_id_pss_seq OWNER TO postgres;
+
+--
+-- TOC entry 2294 (class 0 OID 0)
+-- Dependencies: 187
+-- Name: pss_id_pss_seq; Type: SEQUENCE OWNED BY; Schema: simulador; Owner: postgres
+--
+
+ALTER SEQUENCE pss_id_pss_seq OWNED BY pss.id_pss;
+
+
+SET search_path = sistema, pg_catalog;
+
+--
+-- TOC entry 188 (class 1259 OID 133135)
+-- Name: alertas; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE alertas (
+    id integer NOT NULL,
+    id_usuario_origen integer NOT NULL,
+    id_usuario_destino integer,
+    id_tipo integer,
+    fecha_alta timestamp without time zone DEFAULT now() NOT NULL,
+    fecha_baja timestamp without time zone,
+    mensaje text NOT NULL,
+    activo boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE alertas OWNER TO postgres;
+
+--
+-- TOC entry 189 (class 1259 OID 133143)
+-- Name: alertas_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE alertas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE alertas_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2295 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: alertas_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE alertas_id_seq OWNED BY alertas.id;
+
+
+--
+-- TOC entry 190 (class 1259 OID 133145)
+-- Name: alertas_lecturas; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE alertas_lecturas (
+    id integer NOT NULL,
+    id_alerta integer NOT NULL,
+    id_usuario integer NOT NULL,
+    fecha timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE alertas_lecturas OWNER TO postgres;
+
+--
+-- TOC entry 191 (class 1259 OID 133149)
+-- Name: alertas_lecturas_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE alertas_lecturas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE alertas_lecturas_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2296 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: alertas_lecturas_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE alertas_lecturas_id_seq OWNED BY alertas_lecturas.id;
+
+
+--
+-- TOC entry 215 (class 1259 OID 134891)
+-- Name: mensajes; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE mensajes (
+    id integer NOT NULL,
+    id_usuario_origen integer NOT NULL,
+    id_usuario_destino integer,
+    id_tipo integer,
+    fecha timestamp without time zone DEFAULT now() NOT NULL,
+    titulo text NOT NULL,
+    mensaje text NOT NULL
+);
+
+
+ALTER TABLE mensajes OWNER TO postgres;
+
+--
+-- TOC entry 221 (class 1259 OID 134960)
+-- Name: mensajes_estados; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE mensajes_estados (
+    id integer NOT NULL,
+    id_mensaje integer NOT NULL,
+    id_usuario integer NOT NULL,
+    fecha_leido timestamp without time zone,
+    fecha_eliminado timestamp without time zone
+);
+
+
+ALTER TABLE mensajes_estados OWNER TO postgres;
+
+--
+-- TOC entry 220 (class 1259 OID 134958)
+-- Name: mensajes_estados_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE mensajes_estados_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE mensajes_estados_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2297 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: mensajes_estados_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE mensajes_estados_id_seq OWNED BY mensajes_estados.id;
+
+
+--
+-- TOC entry 214 (class 1259 OID 134889)
+-- Name: mensajes_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE mensajes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE mensajes_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2298 (class 0 OID 0)
+-- Dependencies: 214
+-- Name: mensajes_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE mensajes_id_seq OWNED BY mensajes.id;
+
+
+--
+-- TOC entry 217 (class 1259 OID 134918)
+-- Name: mensajes_respuestas; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE mensajes_respuestas (
+    id integer NOT NULL,
+    id_mensaje integer NOT NULL,
+    id_usuario integer NOT NULL,
+    respuesta text NOT NULL,
+    fecha timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE mensajes_respuestas OWNER TO postgres;
+
+--
+-- TOC entry 219 (class 1259 OID 134942)
+-- Name: mensajes_respuestas_estados; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE mensajes_respuestas_estados (
+    id integer NOT NULL,
+    id_respuesta integer NOT NULL,
+    id_usuario integer NOT NULL,
+    fecha_leido timestamp without time zone,
+    fecha_eliminado timestamp without time zone
+);
+
+
+ALTER TABLE mensajes_respuestas_estados OWNER TO postgres;
+
+--
+-- TOC entry 218 (class 1259 OID 134940)
+-- Name: mensajes_respuestas_estados_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE mensajes_respuestas_estados_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE mensajes_respuestas_estados_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2299 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: mensajes_respuestas_estados_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE mensajes_respuestas_estados_id_seq OWNED BY mensajes_respuestas_estados.id;
+
+
+--
+-- TOC entry 216 (class 1259 OID 134916)
+-- Name: mensajes_respuestas_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE mensajes_respuestas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE mensajes_respuestas_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2300 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: mensajes_respuestas_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE mensajes_respuestas_id_seq OWNED BY mensajes_respuestas.id;
+
+
+--
+-- TOC entry 192 (class 1259 OID 133151)
+-- Name: usuarios; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE usuarios (
+    id integer NOT NULL,
+    login character varying(32) NOT NULL,
+    passwd character varying(32) NOT NULL,
+    nombre text,
+    apellido text,
+    direccion text,
+    telefono text,
+    email text,
+    observaciones text,
+    fecha_alta timestamp without time zone DEFAULT now() NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    id_tipo integer NOT NULL,
+    cuil text
+);
+
+
+ALTER TABLE usuarios OWNER TO postgres;
+
+--
+-- TOC entry 193 (class 1259 OID 133159)
+-- Name: usuarios_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE usuarios_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE usuarios_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2301 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: usuarios_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE usuarios_id_seq OWNED BY usuarios.id;
+
+
+--
+-- TOC entry 194 (class 1259 OID 133161)
+-- Name: usuarios_tipos; Type: TABLE; Schema: sistema; Owner: postgres
+--
+
+CREATE TABLE usuarios_tipos (
+    id integer NOT NULL,
+    nombre text NOT NULL,
+    descripcion text NOT NULL
+);
+
+
+ALTER TABLE usuarios_tipos OWNER TO postgres;
+
+--
+-- TOC entry 195 (class 1259 OID 133167)
+-- Name: usuarios_tipos_id_seq; Type: SEQUENCE; Schema: sistema; Owner: postgres
+--
+
+CREATE SEQUENCE usuarios_tipos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE usuarios_tipos_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 2302 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: usuarios_tipos_id_seq; Type: SEQUENCE OWNED BY; Schema: sistema; Owner: postgres
+--
+
+ALTER SEQUENCE usuarios_tipos_id_seq OWNED BY usuarios_tipos.id;
+
+
+SET search_path = snomed, pg_catalog;
+
+--
+-- TOC entry 202 (class 1259 OID 134311)
+-- Name: concepts; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE concepts (
+    id numeric(18,0) NOT NULL,
+    effectivetime character(8) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    definitionstatusid numeric(18,0) NOT NULL
+);
+
+
+ALTER TABLE concepts OWNER TO postgres;
+
+--
+-- TOC entry 203 (class 1259 OID 134314)
+-- Name: coresubset; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE coresubset (
+    snomed_cid numeric(18,0) NOT NULL,
+    snomed_fsn character(500) NOT NULL,
+    snomed_concept_status character(50) NOT NULL,
+    umls_cui character(8) NOT NULL,
+    occurrence integer NOT NULL,
+    usage real NOT NULL,
+    first_in_subset character(6) NOT NULL,
+    is_retired_from_subset boolean NOT NULL,
+    last_in_subset character(6),
+    replaced_by_snomed_cid character(50)
+);
+
+
+ALTER TABLE coresubset OWNER TO postgres;
+
+--
+-- TOC entry 204 (class 1259 OID 134320)
+-- Name: descriptions; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE descriptions (
+    id numeric(18,0) NOT NULL,
+    effectivetime character(8) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    conceptid numeric(18,0) NOT NULL,
+    languagecode character(2) NOT NULL,
+    typeid numeric(18,0) NOT NULL,
+    term character varying(500) NOT NULL,
+    casesignificanceid numeric(18,0) NOT NULL,
+    textsearchable_index_col tsvector
+);
+
+
+ALTER TABLE descriptions OWNER TO postgres;
+
+--
+-- TOC entry 205 (class 1259 OID 134326)
+-- Name: extendedmapsnapshot; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE extendedmapsnapshot (
+    id character(50) NOT NULL,
+    effectivetime character(8) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    refsetid numeric(18,0) NOT NULL,
+    referencedcomponentid numeric(18,0) NOT NULL,
+    mapgroup integer NOT NULL,
+    mappriority integer NOT NULL,
+    maprule character(500) NOT NULL,
+    mapadvice character(500) NOT NULL,
+    maptarget character(10),
+    maptargetclear character(10),
+    correlationid numeric(18,0) NOT NULL,
+    mapcategoryid numeric(18,0) NOT NULL,
+    id_extendedmapsnapshot integer NOT NULL
+);
+
+
+ALTER TABLE extendedmapsnapshot OWNER TO postgres;
+
+--
+-- TOC entry 206 (class 1259 OID 134332)
+-- Name: extendedmapsnapshot_id_extendedmapsnapshot_seq; Type: SEQUENCE; Schema: snomed; Owner: postgres
+--
+
+CREATE SEQUENCE extendedmapsnapshot_id_extendedmapsnapshot_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE extendedmapsnapshot_id_extendedmapsnapshot_seq OWNER TO postgres;
+
+--
+-- TOC entry 2303 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: extendedmapsnapshot_id_extendedmapsnapshot_seq; Type: SEQUENCE OWNED BY; Schema: snomed; Owner: postgres
+--
+
+ALTER SEQUENCE extendedmapsnapshot_id_extendedmapsnapshot_seq OWNED BY extendedmapsnapshot.id_extendedmapsnapshot;
+
+
+--
+-- TOC entry 207 (class 1259 OID 134334)
+-- Name: languages; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE languages (
+    id character(50) NOT NULL,
+    effectivetime character(8) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    refsetid numeric(18,0) NOT NULL,
+    referencedcomponentid numeric(18,0) NOT NULL,
+    acceptabilityid numeric(18,0) NOT NULL,
+    id_languages integer NOT NULL
+);
+
+
+ALTER TABLE languages OWNER TO postgres;
+
+--
+-- TOC entry 208 (class 1259 OID 134337)
+-- Name: languages_id_languages_seq; Type: SEQUENCE; Schema: snomed; Owner: postgres
+--
+
+CREATE SEQUENCE languages_id_languages_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE languages_id_languages_seq OWNER TO postgres;
+
+--
+-- TOC entry 2304 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: languages_id_languages_seq; Type: SEQUENCE OWNED BY; Schema: snomed; Owner: postgres
+--
+
+ALTER SEQUENCE languages_id_languages_seq OWNED BY languages.id_languages;
+
+
+--
+-- TOC entry 209 (class 1259 OID 134339)
+-- Name: relationships; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE relationships (
+    id numeric(18,0) NOT NULL,
+    effectivetime character(9) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    sourceid numeric(18,0) NOT NULL,
+    destinationid numeric(18,0) NOT NULL,
+    relationshipgroup integer NOT NULL,
+    typeid numeric(18,0) NOT NULL,
+    characteristictypeid numeric(18,0) NOT NULL,
+    modifierid numeric(18,0) NOT NULL
+);
+
+
+ALTER TABLE relationships OWNER TO postgres;
+
+--
+-- TOC entry 210 (class 1259 OID 134342)
+-- Name: statedrelationships; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE statedrelationships (
+    id numeric(18,0) NOT NULL,
+    effectivetime character(9) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    sourceid numeric(18,0) NOT NULL,
+    destinationid numeric(18,0) NOT NULL,
+    relationshipgroup numeric(18,0) NOT NULL,
+    typeid numeric(18,0) NOT NULL,
+    characteristictypeid numeric(18,0) NOT NULL,
+    modifierid numeric(18,0) NOT NULL
+);
+
+
+ALTER TABLE statedrelationships OWNER TO postgres;
+
+--
+-- TOC entry 211 (class 1259 OID 134345)
+-- Name: textdefinitions; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE textdefinitions (
+    id numeric(18,0) NOT NULL,
+    effectivetime character(8) NOT NULL,
+    active boolean NOT NULL,
+    moduleid numeric(18,0) NOT NULL,
+    conceptid numeric(18,0) NOT NULL,
+    languagecode character(2) NOT NULL,
+    typeid numeric(18,0) NOT NULL,
+    term character(1500) NOT NULL,
+    casesignificanceid numeric(18,0) NOT NULL
+);
+
+
+ALTER TABLE textdefinitions OWNER TO postgres;
+
+--
+-- TOC entry 212 (class 1259 OID 134351)
+-- Name: transitiveclosure; Type: TABLE; Schema: snomed; Owner: postgres
+--
+
+CREATE TABLE transitiveclosure (
+    supertypeid numeric(18,0) NOT NULL,
+    subtypeid numeric(18,0) NOT NULL,
+    depth integer NOT NULL,
+    id_transitiveclosure integer NOT NULL
+);
+
+
+ALTER TABLE transitiveclosure OWNER TO postgres;
+
+--
+-- TOC entry 213 (class 1259 OID 134354)
+-- Name: transitiveclosure_id_transitiveclosure_seq; Type: SEQUENCE; Schema: snomed; Owner: postgres
+--
+
+CREATE SEQUENCE transitiveclosure_id_transitiveclosure_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE transitiveclosure_id_transitiveclosure_seq OWNER TO postgres;
+
+--
+-- TOC entry 2305 (class 0 OID 0)
+-- Dependencies: 213
+-- Name: transitiveclosure_id_transitiveclosure_seq; Type: SEQUENCE OWNED BY; Schema: snomed; Owner: postgres
+--
+
+ALTER SEQUENCE transitiveclosure_id_transitiveclosure_seq OWNED BY transitiveclosure.id_transitiveclosure;
+
+
+SET search_path = simulador, pg_catalog;
+
+--
+-- TOC entry 2060 (class 2604 OID 133169)
+-- Name: id_amb; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY amb ALTER COLUMN id_amb SET DEFAULT nextval('amb_id_amb_seq'::regclass);
+
+
+--
+-- TOC entry 2085 (class 2604 OID 137031)
+-- Name: id; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY comentarios ALTER COLUMN id SET DEFAULT nextval('comentarios_id_seq'::regclass);
+
+
+--
+-- TOC entry 2075 (class 2604 OID 134301)
+-- Name: id; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY datos_reportables ALTER COLUMN id SET DEFAULT nextval('datos_reportables_id_seq'::regclass);
+
+
+--
+-- TOC entry 2061 (class 2604 OID 133170)
+-- Name: id_diag; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY diag ALTER COLUMN id_diag SET DEFAULT nextval('diag_id_diag_seq'::regclass);
+
+
+--
+-- TOC entry 2062 (class 2604 OID 133171)
+-- Name: id_esp; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY esp ALTER COLUMN id_esp SET DEFAULT nextval('esp_id_esp_seq'::regclass);
+
+
+--
+-- TOC entry 2063 (class 2604 OID 133172)
+-- Name: id_log_pss; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY log_pss ALTER COLUMN id_log_pss SET DEFAULT nextval('log_pss_id_log_pss_seq'::regclass);
+
+
+--
+-- TOC entry 2064 (class 2604 OID 133173)
+-- Name: id_prod; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY proc ALTER COLUMN id_prod SET DEFAULT nextval('proc_id_prod_seq'::regclass);
+
+
+--
+-- TOC entry 2065 (class 2604 OID 133174)
+-- Name: id_pss; Type: DEFAULT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY pss ALTER COLUMN id_pss SET DEFAULT nextval('pss_id_pss_seq'::regclass);
+
+
+SET search_path = sistema, pg_catalog;
+
+--
+-- TOC entry 2068 (class 2604 OID 133175)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas ALTER COLUMN id SET DEFAULT nextval('alertas_id_seq'::regclass);
+
+
+--
+-- TOC entry 2070 (class 2604 OID 133176)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas_lecturas ALTER COLUMN id SET DEFAULT nextval('alertas_lecturas_id_seq'::regclass);
+
+
+--
+-- TOC entry 2079 (class 2604 OID 134894)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes ALTER COLUMN id SET DEFAULT nextval('mensajes_id_seq'::regclass);
+
+
+--
+-- TOC entry 2084 (class 2604 OID 134963)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_estados ALTER COLUMN id SET DEFAULT nextval('mensajes_estados_id_seq'::regclass);
+
+
+--
+-- TOC entry 2081 (class 2604 OID 134921)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas ALTER COLUMN id SET DEFAULT nextval('mensajes_respuestas_id_seq'::regclass);
+
+
+--
+-- TOC entry 2083 (class 2604 OID 134945)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas_estados ALTER COLUMN id SET DEFAULT nextval('mensajes_respuestas_estados_id_seq'::regclass);
+
+
+--
+-- TOC entry 2073 (class 2604 OID 133177)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios ALTER COLUMN id SET DEFAULT nextval('usuarios_id_seq'::regclass);
+
+
+--
+-- TOC entry 2074 (class 2604 OID 133178)
+-- Name: id; Type: DEFAULT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios_tipos ALTER COLUMN id SET DEFAULT nextval('usuarios_tipos_id_seq'::regclass);
+
+
+SET search_path = snomed, pg_catalog;
+
+--
+-- TOC entry 2076 (class 2604 OID 134356)
+-- Name: id_extendedmapsnapshot; Type: DEFAULT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY extendedmapsnapshot ALTER COLUMN id_extendedmapsnapshot SET DEFAULT nextval('extendedmapsnapshot_id_extendedmapsnapshot_seq'::regclass);
+
+
+--
+-- TOC entry 2077 (class 2604 OID 134357)
+-- Name: id_languages; Type: DEFAULT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY languages ALTER COLUMN id_languages SET DEFAULT nextval('languages_id_languages_seq'::regclass);
+
+
+--
+-- TOC entry 2078 (class 2604 OID 134358)
+-- Name: id_transitiveclosure; Type: DEFAULT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY transitiveclosure ALTER COLUMN id_transitiveclosure SET DEFAULT nextval('transitiveclosure_id_transitiveclosure_seq'::regclass);
+
+
+SET search_path = firma, pg_catalog;
+
+--
+-- TOC entry 2154 (class 2606 OID 526841)
+-- Name: firmas_pkey; Type: CONSTRAINT; Schema: firma; Owner: postgres
+--
+
+ALTER TABLE ONLY firmas
+    ADD CONSTRAINT firmas_pkey PRIMARY KEY (id_firma);
+
+
+SET search_path = simulador, pg_catalog;
+
+--
+-- TOC entry 2090 (class 2606 OID 133180)
+-- Name: amb_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY amb
+    ADD CONSTRAINT amb_pkey PRIMARY KEY (id_amb);
+
+
+--
+-- TOC entry 2152 (class 2606 OID 137036)
+-- Name: comentarios_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY comentarios
+    ADD CONSTRAINT comentarios_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2112 (class 2606 OID 134306)
+-- Name: datos_reportables_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY datos_reportables
+    ADD CONSTRAINT datos_reportables_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2092 (class 2606 OID 133182)
+-- Name: diag_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY diag
+    ADD CONSTRAINT diag_pkey PRIMARY KEY (id_diag);
+
+
+--
+-- TOC entry 2094 (class 2606 OID 133184)
+-- Name: esp_index01; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY esp
+    ADD CONSTRAINT esp_index01 PRIMARY KEY (id_esp);
+
+
+--
+-- TOC entry 2096 (class 2606 OID 133186)
+-- Name: log_pss_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY log_pss
+    ADD CONSTRAINT log_pss_pkey PRIMARY KEY (id_log_pss);
+
+
+--
+-- TOC entry 2098 (class 2606 OID 133188)
+-- Name: proc_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY proc
+    ADD CONSTRAINT proc_pkey PRIMARY KEY (id_prod);
+
+
+--
+-- TOC entry 2100 (class 2606 OID 133190)
+-- Name: pss_pkey; Type: CONSTRAINT; Schema: simulador; Owner: postgres
+--
+
+ALTER TABLE ONLY pss
+    ADD CONSTRAINT pss_pkey PRIMARY KEY (id_pss);
+
+
+SET search_path = sistema, pg_catalog;
+
+--
+-- TOC entry 2104 (class 2606 OID 133192)
+-- Name: alertas_lecturas_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas_lecturas
+    ADD CONSTRAINT alertas_lecturas_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2102 (class 2606 OID 133194)
+-- Name: alertas_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas
+    ADD CONSTRAINT alertas_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2150 (class 2606 OID 134965)
+-- Name: mensajes_lecturas_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_estados
+    ADD CONSTRAINT mensajes_lecturas_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2144 (class 2606 OID 134900)
+-- Name: mensajes_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes
+    ADD CONSTRAINT mensajes_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2148 (class 2606 OID 134947)
+-- Name: mensajes_respuestas_estados_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas_estados
+    ADD CONSTRAINT mensajes_respuestas_estados_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2146 (class 2606 OID 134927)
+-- Name: mensajes_respuestas_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas
+    ADD CONSTRAINT mensajes_respuestas_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2106 (class 2606 OID 133196)
+-- Name: usuarios_index01; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios
+    ADD CONSTRAINT usuarios_index01 PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2108 (class 2606 OID 133198)
+-- Name: usuarios_tipos_pkey; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios_tipos
+    ADD CONSTRAINT usuarios_tipos_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2110 (class 2606 OID 133200)
+-- Name: usuarios_tipos_unicos_idx; Type: CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios_tipos
+    ADD CONSTRAINT usuarios_tipos_unicos_idx UNIQUE (nombre);
+
+
+SET search_path = snomed, pg_catalog;
+
+--
+-- TOC entry 2114 (class 2606 OID 134369)
+-- Name: concepsid; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY concepts
+    ADD CONSTRAINT concepsid PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2127 (class 2606 OID 134371)
+-- Name: extendedmapsnapshot_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY extendedmapsnapshot
+    ADD CONSTRAINT extendedmapsnapshot_pkey PRIMARY KEY (id_extendedmapsnapshot);
+
+
+--
+-- TOC entry 2123 (class 2606 OID 134373)
+-- Name: id_descriptios_pk; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY descriptions
+    ADD CONSTRAINT id_descriptios_pk PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2129 (class 2606 OID 134375)
+-- Name: languages_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY languages
+    ADD CONSTRAINT languages_pkey PRIMARY KEY (id_languages);
+
+
+--
+-- TOC entry 2134 (class 2606 OID 134377)
+-- Name: relationships_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY relationships
+    ADD CONSTRAINT relationships_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2117 (class 2606 OID 134379)
+-- Name: snomed_cid_id_fk; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY coresubset
+    ADD CONSTRAINT snomed_cid_id_fk PRIMARY KEY (snomed_cid);
+
+
+--
+-- TOC entry 2136 (class 2606 OID 134381)
+-- Name: statedrelationships_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY statedrelationships
+    ADD CONSTRAINT statedrelationships_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2138 (class 2606 OID 134383)
+-- Name: textdefinitions_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY textdefinitions
+    ADD CONSTRAINT textdefinitions_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2140 (class 2606 OID 134385)
+-- Name: transitiveclosure_pkey; Type: CONSTRAINT; Schema: snomed; Owner: postgres
+--
+
+ALTER TABLE ONLY transitiveclosure
+    ADD CONSTRAINT transitiveclosure_pkey PRIMARY KEY (id_transitiveclosure);
+
+
+--
+-- TOC entry 2118 (class 1259 OID 134386)
+-- Name: conceptiddescriptionsindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX conceptiddescriptionsindex ON descriptions USING btree (conceptid);
+
+
+--
+-- TOC entry 2115 (class 1259 OID 134387)
+-- Name: conceptsidindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX conceptsidindex ON concepts USING btree (id);
+
+
+--
+-- TOC entry 2119 (class 1259 OID 134388)
+-- Name: descriptionsactiveindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX descriptionsactiveindex ON descriptions USING btree (active);
+
+
+--
+-- TOC entry 2120 (class 1259 OID 134389)
+-- Name: descriptionstypeidindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX descriptionstypeidindex ON descriptions USING btree (typeid);
+
+
+--
+-- TOC entry 2121 (class 1259 OID 134390)
+-- Name: desctermindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX desctermindex ON descriptions USING btree (term);
+
+
+--
+-- TOC entry 2124 (class 1259 OID 134391)
+-- Name: iddescriptionindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX iddescriptionindex ON descriptions USING btree (id);
+
+
+--
+-- TOC entry 2130 (class 1259 OID 134392)
+-- Name: languagesactiveindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX languagesactiveindex ON languages USING btree (active);
+
+
+--
+-- TOC entry 2131 (class 1259 OID 134393)
+-- Name: languagesrefsetidindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX languagesrefsetidindex ON languages USING btree (refsetid);
+
+
+--
+-- TOC entry 2132 (class 1259 OID 134394)
+-- Name: referencedcomponentidindex; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX referencedcomponentidindex ON languages USING btree (referencedcomponentid);
+
+
+--
+-- TOC entry 2125 (class 1259 OID 134395)
+-- Name: textsearch_idx; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX textsearch_idx ON descriptions USING gin (textsearchable_index_col);
+
+
+--
+-- TOC entry 2141 (class 1259 OID 134396)
+-- Name: transitiveclosuresubtypeid; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX transitiveclosuresubtypeid ON transitiveclosure USING btree (subtypeid);
+
+
+--
+-- TOC entry 2142 (class 1259 OID 134397)
+-- Name: transitiveclosuresupertypeid; Type: INDEX; Schema: snomed; Owner: postgres
+--
+
+CREATE INDEX transitiveclosuresupertypeid ON transitiveclosure USING btree (supertypeid);
+
+
+SET search_path = sistema, pg_catalog;
+
+--
+-- TOC entry 2158 (class 2606 OID 133201)
+-- Name: alertas_lecturas_alertas_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas_lecturas
+    ADD CONSTRAINT alertas_lecturas_alertas_fk FOREIGN KEY (id_alerta) REFERENCES alertas(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2159 (class 2606 OID 133206)
+-- Name: alertas_lecturas_usuarios_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas_lecturas
+    ADD CONSTRAINT alertas_lecturas_usuarios_fk FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2155 (class 2606 OID 133211)
+-- Name: alertas_usuarios_destino_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas
+    ADD CONSTRAINT alertas_usuarios_destino_fk FOREIGN KEY (id_usuario_destino) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2156 (class 2606 OID 133216)
+-- Name: alertas_usuarios_origen_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas
+    ADD CONSTRAINT alertas_usuarios_origen_fk FOREIGN KEY (id_usuario_origen) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2157 (class 2606 OID 133221)
+-- Name: alertas_usuarios_tipos_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY alertas
+    ADD CONSTRAINT alertas_usuarios_tipos_fk FOREIGN KEY (id_tipo) REFERENCES usuarios_tipos(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2168 (class 2606 OID 134966)
+-- Name: mensajes_lecturas_mensajes_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_estados
+    ADD CONSTRAINT mensajes_lecturas_mensajes_fk FOREIGN KEY (id_mensaje) REFERENCES mensajes(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2169 (class 2606 OID 134971)
+-- Name: mensajes_lecturas_usuarios_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_estados
+    ADD CONSTRAINT mensajes_lecturas_usuarios_fk FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2164 (class 2606 OID 134928)
+-- Name: mensajes_respuestas-mensajes_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas
+    ADD CONSTRAINT "mensajes_respuestas-mensajes_fk" FOREIGN KEY (id_mensaje) REFERENCES mensajes(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2165 (class 2606 OID 134933)
+-- Name: mensajes_respuestas-usuarios_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas
+    ADD CONSTRAINT "mensajes_respuestas-usuarios_fk" FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2161 (class 2606 OID 134901)
+-- Name: mensajes_tipos_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes
+    ADD CONSTRAINT mensajes_tipos_fk FOREIGN KEY (id_tipo) REFERENCES usuarios_tipos(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2162 (class 2606 OID 134906)
+-- Name: mensajes_usuarios_destino_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes
+    ADD CONSTRAINT mensajes_usuarios_destino_fk FOREIGN KEY (id_usuario_destino) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2163 (class 2606 OID 134911)
+-- Name: mensajes_usuarios_origen_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes
+    ADD CONSTRAINT mensajes_usuarios_origen_fk FOREIGN KEY (id_usuario_origen) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2166 (class 2606 OID 134948)
+-- Name: respuestas_lecturas_respuestas_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas_estados
+    ADD CONSTRAINT respuestas_lecturas_respuestas_fk FOREIGN KEY (id_respuesta) REFERENCES mensajes_respuestas(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2167 (class 2606 OID 134953)
+-- Name: respuestas_lecturas_usuarios_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY mensajes_respuestas_estados
+    ADD CONSTRAINT respuestas_lecturas_usuarios_fk FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2160 (class 2606 OID 133226)
+-- Name: usuarios_usuarios_tipos_fk; Type: FK CONSTRAINT; Schema: sistema; Owner: postgres
+--
+
+ALTER TABLE ONLY usuarios
+    ADD CONSTRAINT usuarios_usuarios_tipos_fk FOREIGN KEY (id_tipo) REFERENCES usuarios_tipos(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 2285 (class 0 OID 0)
+-- Dependencies: 8
+-- Name: public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM postgres;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+-- Completed on 2019-03-19 14:53:08
+
+--
+-- PostgreSQL database dump complete
+--
+

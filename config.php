@@ -68,7 +68,8 @@ $ADODB_CACHE_DIR = LIB_DIR."/adodb/cache";    // Directorio para cache de consul
 $db_schemas = array(  
   "general",
   "administracion",
-  "permisos"
+  "permisos",
+  "firma"
 );
 $db_debug = FALSE;          // Debugger de las consultas.
 

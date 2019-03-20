@@ -76,6 +76,14 @@
 <div class="row">
   <div class="col-xs-12">
     <div class="form-group">
+      <label for="usuario_form_cuil" class="control-label">CUIL</label>
+      <textarea class="form-control" name="usuario_form_cuil" id="usuario_form_cuil"><?php echo $form_cuil; ?></textarea>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xs-12">
+    <div class="form-group">
       <label for="usuario_form_observaciones" class="control-label">Observaciones</label>
       <textarea class="form-control" name="usuario_form_observaciones" id="usuario_form_observaciones"><?php echo $form_observaciones; ?></textarea>
     </div>

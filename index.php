@@ -137,7 +137,22 @@ $id_usuario = $usuario->id;
           <!-- DOC: Set data-keep-expand="true" to keep the submenues expanded -->
           <!-- DOC: Set data-auto-speed="200" to adjust the sub menu slide up/down speed -->
         <ul class="page-sidebar-menu page-header-fixed" data-keep-expanded="false" data-auto-scroll="true" data-slide-speed="500">          
-            <li class="nav-item start active open">
+        			
+			<li class="nav-item start active open">
+              <a href="<?php echo $html_root; ?>/pss/firmas" class="nav-link nav-toggle ajaxify">
+                <i class="icon-tag"></i> 
+                <span class="title">Listado Firmas</span>
+              </a>             
+            </li>
+			
+			<li class="nav-item start">
+              <a href="<?php echo $html_root; ?>/pss/firma_snomed" class="nav-link nav-toggle ajaxify">
+                <i class="icon-cloud-upload"></i> 
+                <span class="title">Firma Digital</span>
+              </a>             
+            </li>
+			
+			<li class="nav-item start">
               <a href="<?php echo $html_root; ?>/pss/listado" class="nav-link nav-toggle ajaxify">
                 <i class="icon-bulb"></i>
                 <span class="title">Simulador Codigos PSS</span>
@@ -186,7 +201,8 @@ $id_usuario = $usuario->id;
           <!-- BEGIN PAGE HEADER-->
           <div class="pull-right"><img src="<?php echo $html_root; ?>/assets/img/ajax-loading.gif" id="loading-indicator" style="display:none" /></div>
           <div class="page-content-body">
-            <?php include(MOD_DIR."/pss/listado.php"); ?>
+            <?php //include(MOD_DIR."/pss/listado.php"); // Seleccion de Menu raiz ?>
+            <?php include(MOD_DIR."/pss/firmas.php"); ?> 
           </div>
           <!-- END PAGE HEADER-->
         </div>

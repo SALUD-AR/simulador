@@ -60,7 +60,7 @@
         </div>
       </form>
     </div>
-    <div class="copyright"><?php echo date("Y"); ?> &copy; Servicio de Consultas de Padrones.</div>
+    <div class="copyright"><?php echo date("Y"); ?> &copy; Simulador de codigos y firma digital.</div>
     <!--[if lt IE 9]>
     <script src="<?php echo $html_root; ?>/assets/plugins/respond.min.js"></script>
     <script src="<?php echo $html_root; ?>/assets/plugins/excanvas.min.js"></script> 

@@ -832,6 +832,311 @@ if (isset($parametros["accion"])) {
       echo $ret;
       break;
 
+	  case 'firmar_snomed_res':
+      $nrodoc= trim($_POST["nrodoc"]);
+      $nombre= trim($_POST["nombre"]);
+      $apellido = trim($_POST["apellido"]);
+      $proc  = trim($_POST["proc"]);
+      $esp   = trim($_POST["esp"]);
+      $amb   = trim($_POST["amb"]);
+      $diag  = trim($_POST["diag"]);
+      $sexo  = trim($_POST["sexo"]);
+      $grupo_etareo  = trim($_POST["grupo_etareo"]);  
+      $obs = trim($_POST["obs"]);
+      
+      //$firmahash = hash('md5',$proc.$esp.$amb.$diag.$sexo.$grupo_etareo.$firma);  //(p.ej., "md5", "sha256", "haval160,4", etc..) md5(string); sha1(string);
+      //$firmahash = base64_encode($nrodoc.$nombre.$apellido.$proc.$esp.$amb.$diag.$sexo.$grupo_etareo.$obs); 
+      $firmahash = base64_encode($nrodoc.$nombre.$apellido.$diag.$sexo.$obs); 
+      
+      $data_array=null; // array
+      $atoken = base64_encode("$http_token_key:$http_secret");
+      
+      $headers = null; // array
+
+      $make_call = callAPI_token('POST', $html_firma.$html_RA.'oauth/token?grant_type=client_credentials', json_encode($data_array),array($headers),$atoken);
+
+      $response = json_decode($make_call);
+     
+      if (!$response->error) {
+          $access_token   = $response->access_token;
+          $token_type     = $response->token_type;
+          $expires_in     = $response->expires_in;
+          $scope          = $response->scope;
+          $callback_url   = $response->callback_url;
+          $jti            = $response->jti;
+      } else {
+          $timestamp      = $response->timestamp;
+          $status         = $response->status;
+          $error          = $response->error;
+          $message        = $response->message;
+          $path           = $response->path;
+          $error_description  = $response->error_description;
+          $ret .= '<ul class="list-group"><li class="list-group-item alert alert-danger" role="alert">Error! Acceso no autorizado.<br>'.var_dump($response).'</li></ul>';
+          echo $ret;
+          break;
+      }
+
+      //$cuil = "xx-xxxxxxxx-x"; // El login de usuario deberia estar ligado a un cuil
+      //$cuil = $http_cuil_firmador; // en db.php version anterior
+      $cuil = $usuario->cuil;
+
+      $headers = array(
+        //"Authorization"  => "Bearer ".$access_token   
+        //'Content-Type: application/json',
+        //'Authorization', 'OAuth '.$access_token,
+      );
+      
+      $location = 'Pendiente';
+      $paciente = "$nrodoc - $nombre $apellido";
+
+      $query="INSERT INTO 
+                    firma.firmas 
+                      (id_usuario, fecha_firma, documento, documento_enviado, metadata, status, location, nrodoc, nombres, apellido, diagnostico, sexo, evolucion)
+                    VALUES (
+                      ".$usuario->id.",
+                      current_timestamp,
+                      '".$firmahash."',
+                      '".$firmahash."',
+                      '{\"Firma\": \"Pendiente\"}',
+                      'Pendiente de Envio',
+                      '".$location."',
+					  '".$nrodoc."',
+					  '".$nombre."',
+					  '".$apellido."',
+					  '".$diag."',
+					  '".$sexo."',
+					  '".$obs."'
+                      ) RETURNING id_firma
+                    ;";
+      
+      $res = sql($query) or die($db->ErrorMsg());
+
+      $id_firma=$res->fields['id_firma'];
+      
+      $query_log="INSERT INTO 
+                    simulador.log_pss
+                  (id_pss, accion, fecha, usuario)
+                  VALUES 
+                  ($id_firma, 'Pendiente de Envio de Firma', current_timestamp, {$usuario->id});"; 
+
+      $res_query_log = sql($query_log) or die($db->ErrorMsg());
+
+      $data_array =  array(
+        "cuil"  => $cuil,
+        "documento" => $firmahash,
+        "metadata" => array(
+          "Firma"       => "$id_firma"
+        ),
+        "type" => "HASH",
+        "urlRedirect" => "$http_urlRedirect"."$id_firma"
+      );
+
+      $make_call_enviar = callAPI_enviar('POST', $html_firma.$html_firmador.$html_api, json_encode($data_array),json_encode($headers),$access_token);
+     
+        if (preg_match('~Location: (.*)~i', $make_call_enviar, $match)) {
+          $location = trim($match[1]);
+                    
+          $query="UPDATE firma.firmas SET 
+                    metadata = '{\"Firma\": ".$id_firma."}',
+                    status = 'Enviado',
+                    location = '".$location."'
+                  WHERE              
+                    id_firma = $id_firma;";
+
+          $res = sql($query) or die($db->ErrorMsg());
+
+          //$id_firma=$res->fields['id_firma'];
+          $query_log="INSERT INTO 
+                        simulador.log_pss
+                      (id_pss, accion, fecha, usuario)
+                      VALUES 
+                      ($id_firma, 'Envio de Firma(Esperando Resultado)', current_timestamp, {$usuario->id});"; 
+
+          $res_query_log = sql($query_log) or die($db->ErrorMsg());
+
+          if ($res) {
+            $ret .= 'OK';
+          }
+          else {
+            $ret .= 'Ocurri&oacute; un error al agregar los datos de la Firma!';
+            echo $ret;
+            break;
+          }
+
+          // Redirect a la pagina del resultado
+          echo '<script type="text/javascript">window.location = "'.$location.'"</script>';
+        
+        } else {
+          $ret .= '<ul class="list-group"><li class="list-group-item alert alert-danger" role="alert">Error! Error en la Firma.<br>'.var_dump($make_call_enviar).'</li></ul>';
+          echo $ret;
+        }
+
+    break;
+
+    case 'listado_firmas':
+      $res_json = array();
+
+      $query = "SELECT 
+                  f.id_firma AS id,
+                  f.documento,
+                  f.documento_enviado,
+                  f.metadata, 
+                  f.status, 
+                  f.id_usuario, 
+                  f.fecha_firma as fecha, 
+                  f.location,
+                  f.msg,
+                  f.nrodoc,
+                  f.nombres,
+                  f.apellido,
+                  f.sexo,
+                  f.diagnostico,
+                  f.evolucion
+                FROM 
+                  firma.firmas f
+                WHERE
+                  f.id_usuario = ".$usuario->id.";
+              ";
+           
+      $res = sql($query) or die($db->ErrorMsg());
+
+      while (!$res->EOF) {
+        $res_json[] = array(
+          "id"       => $res->fields["id"],
+          "fecha" => $res->fields["fecha"],
+          "paciente"   => $res->fields["nrodoc"].' '.$res->fields["nombres"].' '.$res->fields["apellido"],
+          "api"     => str_replace($html_firma.$html_firmador.$html_api.'/', "", $res->fields["location"]),
+          "status"    => str_replace("{\"success\":true}","Firmado",$res->fields["status"])
+        );
+        $res->MoveNext();
+      }
+      echo json_encode(array("data" =>$res_json));
+    break;
+
+    case 'ver_firma':
+      $id_firma = intval($_POST["id"]);
+  
+      if ($id_firma > 0) {
+        
+        $query = "SELECT 
+            f.id_firma AS id,
+            f.documento,
+            f.documento_enviado,
+            f.metadata, 
+            f.status, 
+            f.id_usuario, 
+            f.fecha_firma as fecha, 
+            f.location,
+            f.msg,
+            f.nrodoc,
+            f.nombres,
+            f.apellido,
+            f.sexo,
+            f.diagnostico,
+            f.evolucion
+          FROM 
+            firma.firmas f
+          WHERE
+            f.id_firma = ".$id_firma.";
+        ";
+
+        $res = sql($query) or die($db->ErrorMsg());
+        if ($res !== false && $res->recordCount() == 1) {
+          $form_id = $res->fields["id_firma"];
+          //$form_documento = base64_decode($res->fields["documento"]);
+          $form_documento = $res->fields["documento"];
+          //$form_documento_enviado = base64_decode($res->fields["documento_enviado"]);
+          $form_documento_enviado = $res->fields["documento_enviado"];
+          $form_metadata = $res->fields["metadata"];
+          $form_status = str_replace("{\"success\":true}","Firmado",$res->fields["status"]);
+          $form_id_usuario = $res->fields["id_usuario"];
+          $form_paciente = $res->fields["nrodoc"].' '.$res->fields["nombres"].' '.$res->fields["apellido"];
+          $form_fecha = $res->fields["fecha"];
+          $form_location = $res->fields["location"];
+          $form_msg = $res->fields["msg"];
+          $form_nrodoc = $res->fields["nrodoc"];
+          $form_nombres = $res->fields["nombres"];
+          $form_apellido = $res->fields["apellido"];
+          $form_sexo = $res->fields["sexo"];
+          $form_diagnostico = $res->fields["diagnostico"];
+          $form_evolucion = $res->fields["evolucion"];
+			  
+		  echo '<form id="firma_form" method="POST" onsubmit="return firma_form_submit(this);">';
+		  include_once("firma_form.php");
+		  echo '</form>';         
+          
+        }
+        else {
+          echo '<ul class="list-group"><li class="list-group-item alert alert-warning" role="alert">Firma incorrecta</li></ul>';
+        }
+      }
+      else {
+        echo '<ul class="list-group"><li class="list-group-item alert alert-warning" role="alert">Par&aacute;metros incorrectos</li></ul>';
+      }
+      break;
+	  
+	case 'ver_firma_callback':
+      $id_firma = intval($_POST["id"]);
+      
+      if ($id_firma > 0) {
+        
+        $query = "SELECT 
+            f.id_firma AS id,
+            f.documento,
+            f.documento_enviado,
+            f.metadata, 
+            f.status, 
+            f.id_usuario, 
+            f.fecha_firma as fecha, 
+            f.location,
+            f.msg,
+            f.nrodoc,
+            f.nombres,
+            f.apellido,
+            f.sexo,
+            f.diagnostico,
+            f.evolucion
+          FROM 
+            firma.firmas f
+          WHERE
+            f.id_firma = ".$id_firma.";
+        ";
+
+        $res = sql($query) or die($db->ErrorMsg());
+        if ($res !== false && $res->recordCount() == 1) {
+          $form_id = $res->fields["id_firma"];
+          //$form_documento = base64_decode($res->fields["documento"]);
+          $form_documento = $res->fields["documento"];
+          //$form_documento_enviado = base64_decode($res->fields["documento_enviado"]);
+          $form_documento_enviado = $res->fields["documento_enviado"];
+          $form_metadata = $res->fields["metadata"];
+          $form_status = str_replace("{\"success\":true}","Firmado",$res->fields["status"]);
+          $form_id_usuario = $res->fields["id_usuario"];
+          $form_paciente = $res->fields["nrodoc"].' '.$res->fields["nombres"].' '.$res->fields["apellido"];
+          $form_fecha = $res->fields["fecha"];
+          $form_location = $res->fields["location"];
+          $form_msg = $res->fields["msg"];
+          $form_nrodoc = $res->fields["nrodoc"];
+          $form_nombres = $res->fields["nombres"];
+          $form_apellido = $res->fields["apellido"];
+          $form_sexo = $res->fields["sexo"];
+          $form_diagnostico = $res->fields["diagnostico"];
+          $form_evolucion = $res->fields["evolucion"];
+          
+			echo '<form id="modal_form" method="POST" onsubmit="return modal_form_submit(this);">';
+			include_once("firma_form.php");
+			echo '</form>';
+       
+        }
+        else {
+          echo '<ul class="list-group"><li class="list-group-item alert alert-warning" role="alert">Firma incorrecta</li></ul>';
+        }
+      }
+      else {
+        echo '<ul class="list-group"><li class="list-group-item alert alert-warning" role="alert">Par&aacute;metros incorrectos</li></ul>';
+      }
+      break;
+	  
     default:
       echo 'Comando no v&aacute;lido';
       break;

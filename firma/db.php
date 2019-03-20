@@ -10,7 +10,7 @@ $db_user = 'postgres';        // Usuario.
 $db_password = 'Cache8080';      // Contraseña.
 $db_name = 'simulador';
 
-define("DB_HOST", "$db_host");  
+define("DB_HOST", $db_host);  
 define("DB_USER", $db_user);  
 define("DB_PASSWORD", $db_paswword);  
 define("DB_NAME", $db_name);  

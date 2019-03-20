@@ -11,7 +11,8 @@ if (isset($parametros["accion"])) {
                   u.nombre,
                   t.descripcion AS tipo,
                   u.telefono,
-                  u.email
+                  u.email,
+				          u.cuil
                 FROM
                   sistema.usuarios u
                   LEFT OUTER JOIN sistema.usuarios_tipos t ON (u.id_tipo = t.id)
@@ -19,7 +20,6 @@ if (isset($parametros["accion"])) {
                   u.activo = 't'
       ";
 
-      
       $res = sql($query) or die($db->ErrorMsg());
 
       while (!$res->EOF) {
@@ -29,7 +29,8 @@ if (isset($parametros["accion"])) {
           "nombre"   => $res->fields["nombre"],
           "tipo"     => $res->fields["tipo"],
           "telefono" => $res->fields["telefono"],
-          "email"    => $res->fields["email"]
+          "email"    => $res->fields["email"],
+		      "cuil"    => $res->fields["cuil"]
         );
         $res->MoveNext();
       }
@@ -61,6 +62,7 @@ if (isset($parametros["accion"])) {
       $form_direccion = "";
       $form_telefono = "";
       $form_email = "";
+	    $form_cuil = "";
       $form_observaciones = "";
 
       $form_tipos = array();
@@ -101,6 +103,7 @@ if (isset($parametros["accion"])) {
                     u.direccion,
                     u.telefono,
                     u.email,
+					          u.cuil,
                     u.observaciones
                   FROM
                     sistema.usuarios u
@@ -118,6 +121,7 @@ if (isset($parametros["accion"])) {
           $form_direccion = $res->fields["direccion"];
           $form_telefono = $res->fields["telefono"];
           $form_email = $res->fields["email"];
+		      $form_cuil = $res->fields["cuil"];
           $form_observaciones = $res->fields["observaciones"];
 
           $form_tipos = array();
@@ -164,6 +168,7 @@ if (isset($parametros["accion"])) {
       $direccion = $db->Quote($_POST["usuario_form_direccion"]);
       $telefono = $db->Quote($_POST["usuario_form_telefono"]);
       $email = $db->Quote($_POST["usuario_form_email"]);
+      $cuil = $db->Quote($_POST["usuario_form_cuil"]);
       $observaciones = $db->Quote($_POST["usuario_form_observaciones"]);
       $ret = '';
       $error = '';
@@ -189,6 +194,7 @@ if (isset($parametros["accion"])) {
           direccion,
           telefono,
           email,
+          cuil,
           observaciones
         ) VALUES (";
         $query .= $id_tipo.", ".
@@ -199,6 +205,7 @@ if (isset($parametros["accion"])) {
                   $direccion.", ".
                   $telefono.", ".
                   $email.", ".
+                  $cuil.", ".
                   $observaciones.")";
 
         $res = sql($query) or die($db->ErrorMsg());
@@ -226,6 +233,7 @@ if (isset($parametros["accion"])) {
       $direccion = $db->Quote($_POST["usuario_form_direccion"]);
       $telefono = $db->Quote($_POST["usuario_form_telefono"]);
       $email = $db->Quote($_POST["usuario_form_email"]);
+      $cuil = $db->Quote($_POST["usuario_form_cuil"]);
       $observaciones = $db->Quote($_POST["usuario_form_observaciones"]);
       $ret = '';
       $error = '';
@@ -253,6 +261,7 @@ if (isset($parametros["accion"])) {
         $query .= "direccion = $direccion,";
         $query .= "telefono = $telefono,";
         $query .= "email = $email,";
+		    $query .= "cuil = $cuil,";
         $query .= "observaciones = $observaciones ";
         $query .= "WHERE id = $id_usuario";
 
