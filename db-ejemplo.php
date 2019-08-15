@@ -26,7 +26,7 @@ $html_firmador = 'firmador/';
 $html_api ='api/signatures';
 $http_token_key = 'AFDAFASFAKZXCKLZJZJXVJZX45454545'; // Token provisto por firmar.gob.ar para la aplicacion
 $http_secret = '12345566676788889967643623525423';    // secret provisto por firmar.gob.ar para la aplicacion
-$http_cuil_firmador = 'XX-XXXXXXXX-X'; // esta ligado a un usuario logueado en el sistema
+$http_cuil_firmador = 'XX-XXXXXXXX-X'; // esta variable ya no se usa, un campo en la tabla de usuarios es el cuil
 $http_urlRedirect = 'http://localhost/simulador/?firma=1';
 
 ?>
