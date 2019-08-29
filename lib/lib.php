@@ -87,30 +87,21 @@ if (!is_file(ROOT_DIR."/acl.data")) {
     $acl->allow("Sistema", $recurso, "*");
   }
 
-  // $acl->allow("Administrativo", "/pacientes/listado", "editar");
-  // $acl->allow("Administrativo", "/pacientes/agregar", "editar");
-  // $acl->allow("Administrativo", "/pacientes/modificar", "editar");
-  // $acl->allow("Administrativo", "/administracion/rotacion_camas", "editar");
-  // $acl->allow("Administrativo", "/administracion/rotacion_personal", "editar");
-  // $acl->allow("Administrativo", "/administracion/pago_pacientes", "editar");
-  // $acl->allow("Administrativo", "/sistema/usuarios", "editar");
-
   $acl->allow("Consulta", "/pss/listado", "ver");
   $acl->allow("Consulta", "/pss/listado_pss", "ver");
+
+  $acl->allow("Consulta", "/pss/informe", "ver");
+  $acl->allow("Consulta", "/pss/consulta_snomed", "ver");
+  $acl->allow("Consulta", "/recupero/listado_recu", "ver");
+  $acl->allow("Consulta", "/recupero/listado_recu_datos", "ver");
+  $acl->allow("Consulta", "/recupero/consulta_snomed_recu", "ver");
+  $acl->allow("Consulta", "/sistema/mensajes", "ver");
   
   // Firma Digital 
   $acl->allow("Consulta", "/pss/firma", "ver");
   $acl->allow("Consulta", "/pss/firmas", "ver");
   $acl->allow("Consulta", "/pss/firma_snomed", "ver");
   // Firma Digital
-
-  // $acl->allow("Nutricionista", "/sistema/alertas", "ver");
-  // $acl->allow("Nutricionista", "/pacientes/informacion", "ver");
-  // $acl->allow("Nutricionista", "/pacientes/detalle", "ver");
-  // $acl->allow("Nutricionista", "/pacientes/listado", "ver");
-  // $acl->allow("Nutricionista", "/pacientes/nutricion", "*");
-  // $acl->allow("Nutricionista", "/administracion/rotacion_personal", "ver");
-
 
   file_put_contents(ROOT_DIR."/acl.data", serialize($acl));
 } else {
