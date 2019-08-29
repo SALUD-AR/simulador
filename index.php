@@ -152,25 +152,54 @@ $id_usuario = $usuario->id;
               </a>             
             </li>
 			
-			<li class="nav-item start">
-              <a href="<?php echo $html_root; ?>/pss/listado" class="nav-link nav-toggle ajaxify">
+            <li class="nav-item">
+              <a href="javascript:;" class="nav-link nav-toggle">
                 <i class="icon-bulb"></i>
-                <span class="title">Simulador Codigos PSS</span>
-              </a>              
-            </li>
+                <span class="title">Mapeos</span>
+                <span class="arrow"></span>
+              </a>
+              <ul class="sub-menu">
+                <li class="nav-item start">
+                  <a href="<?php echo $html_root; ?>/pss/listado" class="nav-link nav-toggle ajaxify">
+                    <i class="icon-bulb"></i>
+                    <span class="title">PSS PACES </span>
+                  </a> 
+                </li>
+                <li class="nav-item start">
+                  <a href="<?php echo $html_root; ?>/pss/consulta_snomed" class="nav-link nav-toggle ajaxify">
+                    <i class="icon-bulb"></i>
+                    <span class="title">PSS PACES SNOMED Completo</span>
+                  </a>              
+                </li>
+                <li class="nav-item start">
+                  <a href="<?php echo $html_root; ?>/recupero/consulta_snomed_recu" class="nav-link nav-toggle ajaxify">
+                    <i class="icon-bulb"></i>
+                    <span class="title">Nomenclador Nacional SNOMED Completo</span>
+                  </a>              
+                </li>
+              </ul>
+            </li> 
 
-            <li class="nav-item start">
-              <a href="<?php echo $html_root; ?>/pss/consulta_snomed" class="nav-link nav-toggle ajaxify">
-                <i class="icon-bulb"></i>
-                <span class="title">Simulador Codigos SNOMED</span>
-              </a>              
-            </li>
-
-            <li class="nav-item start">
-              <a href="<?php echo $html_root; ?>/pss/listado_pss" class="nav-link nav-toggle ajaxify">
-                <i class="icon-puzzle"></i> 
-                <span class="title">Listado PSS</span>
-              </a>             
+            <li class="nav-item">
+              <a href="javascript:;" class="nav-link nav-toggle">
+                <i class="icon-puzzle"></i>
+                <span class="title">Listados</span>
+                <span class="arrow"></span>
+              </a>
+              <ul class="sub-menu">
+                <li class="nav-item start">
+                  <a href="<?php echo $html_root; ?>/pss/listado_pss" class="nav-link nav-toggle ajaxify">
+                  <i class="icon-puzzle"></i> 
+                  <span class="title">PSS PACES</span>
+                  </a> 
+                </li>
+                <li class="nav-item start">
+                  <a href="<?php echo $html_root; ?>/recupero/listado_recu" class="nav-link nav-toggle ajaxify">
+                  <i class="icon-puzzle"></i> 
+                  <span class="title">Nomenclador Nacional</span>
+                  </a>
+                </li>
+              </ul>
             </li>
             
             <li class="nav-item">
@@ -291,15 +320,12 @@ script>
     <!-- END THEME GLOBAL SCRIPTS -->
     <!-- BEGIN THEME LAYOUT SCRIPTS -->
     <script src="<?php echo $html_root; ?>/assets/js/layout.js" type="text/javascript"></script>
-    <!-- <script src="<?php echo $html_root; ?>/assets/js/demo.min.js" type="text/javascript"></script> -->
-    <!-- <script src="<?php echo $html_root; ?>/assets/js/quick-sidebar.min.js" type="text/javascript"></script> -->
+    
     <!-- END THEME LAYOUT SCRIPTS -->
     <script src="<?php echo $html_root; ?>/assets/js/general.js" type="text/javascript"></script>
     <script type="text/javascript">
-      var url_reloj = '<?php echo encode_link($html_root."/configuracion/agendas_datos", array("accion" => "reloj_turno")); ?>';
-      var url_mensajes = '<?php echo encode_link($html_root."/sistema/mensajes_datos", array("accion" => "mensajes_nuevos")); ?>';
-      var url_consultorios_form = '<?php echo encode_link($html_root."/configuracion/consultorios_datos", array("accion" => "guardar_consultorio")); ?>';
-      var turno_activo = 0;
+      
+      var url_mensajes = '<?php echo encode_link($html_root."/sistema/mensajes_datos", array("accion" => "mensajes_nuevos")); ?>';      
 
       $(window).load(function() {
         if (typeof initCalendar == 'function') {

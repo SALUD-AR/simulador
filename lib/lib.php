@@ -71,6 +71,9 @@ if (!is_file(ROOT_DIR."/acl.data")) {
     '/pss/informe'                 => array('ver', 'editar'),
     '/pss/modificar'               => array('ver', 'editar'),
     '/pss/consulta_snomed'         => array('ver', 'editar'),
+    '/recupero/listado_recu'       => array('ver', 'editar'),
+    '/recupero/listado_recu_datos' => array('ver', 'editar'),
+    '/recupero/consulta_snomed_recu' => array('ver', 'editar'),
     '/sistema/usuarios'            => array('ver', 'editar'),
     '/sistema/mensajes'            => array('ver', 'editar'),
   );
@@ -108,27 +111,6 @@ if (!is_file(ROOT_DIR."/acl.data")) {
   // $acl->allow("Nutricionista", "/pacientes/nutricion", "*");
   // $acl->allow("Nutricionista", "/administracion/rotacion_personal", "ver");
 
-  // $acl->allow("Enfermero", "/sistema/alertas", "ver");
-  // $acl->allow("Enfermero", "/pacientes/informacion", "ver");
-  // $acl->allow("Enfermero", "/pacientes/detalle", "ver");
-  // $acl->allow("Enfermero", "/pacientes/listado", "ver");
-  // $acl->allow("Enfermero", "/pacientes/enfermeria", "*");
-  // $acl->allow("Enfermero", "/administracion/rotacion_personal", "ver");
-
-  // $acl->allow("Farmacéutico", "/sistema/alertas", "ver");
-  // $acl->allow("Farmacéutico", "/pacientes/informacion", "ver");
-  // $acl->allow("Farmacéutico", "/pacientes/detalle", "ver");
-  // $acl->allow("Farmacéutico", "/pacientes/listado", "ver");
-  // $acl->allow("Farmacéutico", "/pacientes/farmacia", "*");
-  // $acl->allow("Farmacéutico", "/farmacia/listado", "*");
-  // $acl->allow("Farmacéutico", "/administracion/rotacion_personal", "ver");
-  
-  // $acl->allow("Kinesiólogo", "/sistema/alertas", "ver");
-  // $acl->allow("Kinesiólogo", "/pacientes/informacion", "ver");
-  // $acl->allow("Kinesiólogo", "/pacientes/detalle", "ver");
-  // $acl->allow("Kinesiólogo", "/pacientes/listado", "ver");
-  // $acl->allow("Kinesiólogo", "/pacientes/kinesiologia", "*");
-  // $acl->allow("Kinesiólogo", "/administracion/rotacion_personal", "ver");
 
   file_put_contents(ROOT_DIR."/acl.data", serialize($acl));
 } else {

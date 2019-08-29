@@ -35,32 +35,6 @@ else
   define("BROWSER_OK", false);
 }
 
-
-/*******************************************
- ** Colores del sistema.
- *******************************************/
-
-// $bgcolor1 = "#BCD4E6";    // Primer color de fondo
-// $bgcolor2 = "#D5D5D5";    // Segundo color de fondo
-// $bgcolor3 = "#B7CEC4";    // Tercer color de fondo
-// $bgcolor  = "#BCD4E6";
-
-
-// $bgcolor_out  = "#F2EFFB"; // Color de fondo (onmouseout)
-// $bgcolor_over = "#B9CCF4"; // Color de fondo (onmouseover)
-// $text_color_out  = "#000000";
-// $text_color_over = "#000000";
-
-// atributo de los tr de los listados
-// $atrib_tr="bgcolor=$bgcolor_out onmouseover=\"this.style.backgroundColor = '$bgcolor_over'; this.style.color = '$text_color_over'\" onmouseout=\"this.style.backgroundColor = '$bgcolor_out'; this.style.color = '$text_color_out'\"";
-
-/*******************************************
- ** Cantidad de items a mostrar por página.
- *******************************************/
-
-// $itemspp = 50;
-
-
 $ADODB_CACHE_DIR = LIB_DIR."/adodb/cache";    // Directorio para cache de consultas
 // Arreglo que contiene los nombres de los esquemas en la
 // base de datos para poder acceder a las tablas sin tener
