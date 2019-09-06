@@ -117,6 +117,9 @@ function consultar() {
       return 0;
     }
 
+    $('#res_pss').html("");
+    $('#res_pss').html('<div class="loading">Un momento, por favor...</div>');
+
     var url = '<?php echo encode_link($html_root."/recupero/listado_recu_datos", array("accion" => "busca_snomed_res")); ?>';
     $.post(url, {
       proc: proc
